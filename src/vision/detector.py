@@ -4,7 +4,6 @@ from ultralytics import YOLO
 
 from domain.player import Player
 
-
 class YOLODetector:
     def __init__(self, model_path: str, device: str = "cuda"):
         self.model = YOLO(model_path).to(device)

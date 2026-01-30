@@ -2,7 +2,6 @@ import cv2
 import numpy as np
 import mss
 
-
 class ScreenCapture:
     def __init__(self, box: int, monitor: int = 1):
         self.box = box
