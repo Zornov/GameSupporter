@@ -5,16 +5,11 @@ use opencv::{
     videoio::{self, VideoCapture},
 };
 
-use super::capture::Capture;
+pub(crate) use super::capture::{Capture, ScreenSize};
 
 pub struct CardCapture {
     cap: VideoCapture,
     roi: Rect,
-}
-
-pub struct ScreenSize {
-    pub width: i32,
-    pub height: i32,
 }
 
 impl CardCapture {
