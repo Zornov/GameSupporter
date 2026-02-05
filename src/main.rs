@@ -3,8 +3,8 @@ mod capture;
 use opencv::highgui;
 use capture::capture::Capture;
 use capture::card::CardCapture;
+use capture::ScreenSize;
 use anyhow::Result;
-use crate::capture::card::ScreenSize;
 
 const SCREEN_SIZE: ScreenSize = ScreenSize {
     width: 1920,
@@ -22,6 +22,7 @@ fn get_card_index() -> Result<i32> {
 fn main() -> Result<()> {
     let camera_index = get_card_index()?;
     let mut card = CardCapture::new(camera_index, 420, SCREEN_SIZE)?;
+    // screen let screen = ScreenCapture::new(420, SCREEN_SIZE);
 
     highgui::named_window(WINDOW_NAME, highgui::WINDOW_NORMAL)?;
     highgui::set_window_property(WINDOW_NAME, highgui::WND_PROP_TOPMOST, 1.0)?;
