@@ -6,3 +6,4 @@ edition = "2024"
 [dependencies]
 anyhow = "1.0.100"
 opencv = "0.98.1"
+bytemuck = { version = "1.25.0", features = ["derive"] }

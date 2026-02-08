@@ -1,16 +1,17 @@
 mod capture;
+mod mouse;
 
-use opencv::highgui;
+use std::time::Duration;
+use anyhow::Result;
 use capture::capture::Capture;
 use capture::card::CardCapture;
 use capture::ScreenSize;
-use anyhow::Result;
+use mouse::kmbox::KmBox;
+use opencv::highgui;
+use crate::mouse::mouse::Mouse;
 
-const SCREEN_SIZE: ScreenSize = ScreenSize {
-    width: 1920,
-    height: 1080,
-};
-const WINDOW_NAME: &str = "Card Capture";
+const SCREEN_SIZE: ScreenSize = ScreenSize { width: 1920, height: 1080 };
+const WINDOW_NAME: &str = "AiLocker";
 
 fn get_card_index() -> Result<i32> {
     let mut input = String::new();
@@ -20,9 +21,17 @@ fn get_card_index() -> Result<i32> {
     Ok(camera_index)
 }
 fn main() -> Result<()> {
+    let mut kmbox = KmBox::connect("192.168.2.188", 61697, "FF313CAB")?;
+
+    kmbox.move_delta(0, -50);
+    kmbox.right(true);
+    kmbox.right(false);
+    std::thread::sleep(Duration::from_millis(150));
+    kmbox.left(true);
+    kmbox.left(false);
+
     let camera_index = get_card_index()?;
     let mut card = CardCapture::new(camera_index, 420, SCREEN_SIZE)?;
-    // screen let screen = ScreenCapture::new(420, SCREEN_SIZE);
 
     highgui::named_window(WINDOW_NAME, highgui::WINDOW_NORMAL)?;
     highgui::set_window_property(WINDOW_NAME, highgui::WND_PROP_TOPMOST, 1.0)?;
@@ -32,11 +41,15 @@ fn main() -> Result<()> {
         let frame = card.grab()?;
         highgui::imshow(WINDOW_NAME, &frame)?;
 
-        let key = highgui::wait_key(30)?;
-        if key == 27 {
-            break;
+        let key = highgui::wait_key(50)?;
+        if key == 118 {
+            kmbox.move_delta(0, -50);
+            kmbox.right(true);
+            kmbox.right(false);
+            std::thread::sleep(Duration::from_millis(150));
+            kmbox.left(true);
+            kmbox.left(false);
+
         }
     }
-
-    Ok(())
 }
