@@ -23,13 +23,6 @@ fn get_card_index() -> Result<i32> {
 fn main() -> Result<()> {
     let mut kmbox = KmBox::connect("192.168.2.188", 61697, "FF313CAB")?;
 
-    kmbox.move_delta(0, -50);
-    kmbox.right(true);
-    kmbox.right(false);
-    std::thread::sleep(Duration::from_millis(150));
-    kmbox.left(true);
-    kmbox.left(false);
-
     let camera_index = get_card_index()?;
     let mut card = CardCapture::new(camera_index, 420, SCREEN_SIZE)?;
 
@@ -49,7 +42,6 @@ fn main() -> Result<()> {
             std::thread::sleep(Duration::from_millis(150));
             kmbox.left(true);
             kmbox.left(false);
-
         }
     }
 }
