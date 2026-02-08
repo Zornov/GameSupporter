@@ -1,6 +1,6 @@
 
 
-
+#[allow(dead_code)]
 pub trait Mouse {
     fn left(&mut self, down: bool);
     fn right(&mut self, down: bool);
