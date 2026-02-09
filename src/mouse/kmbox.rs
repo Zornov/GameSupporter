@@ -33,7 +33,6 @@ struct MousePacket {
     x: i32,
     y: i32,
     wheel: i32,
-    _reserved: [i32; 10],
 }
 
 pub struct KmBox {
@@ -80,7 +79,6 @@ impl KmBox {
             head: self.next_header(cmd),
             button, x, y,
             wheel: 0,
-            _reserved: [0; 10],
         };
         self.socket.send_to(bytes_of(&packet), self.addr)?;
         Ok(())
