@@ -1,7 +1,8 @@
 use anyhow::{ensure, Result};
 use bytemuck::{bytes_of, Pod, Zeroable};
-use std::net::{SocketAddr, UdpSocket};
+use std::net::{Ipv4Addr, SocketAddr, UdpSocket};
 use std::time::Duration;
+use rand::random;
 use crate::mouse::mouse::Mouse;
 
 /// KmBox communication protocol.
@@ -14,6 +15,8 @@ enum Cmd {
     AutoMove = 0xAEDE7346,
     Left = 0x9823AE8D,
     Right = 0x238D8212,
+    SetConfig = 0x1D3D3323,
+    ShowPic = 0x12334883, // not implemented yet
     Reboot = 0xAA8855AA,
 }
 
@@ -22,7 +25,7 @@ enum Cmd {
 #[derive(Clone, Copy, Pod, Zeroable)]
 struct Header {
     mac: u32,
-    time: u32,
+    rand: u32,
     index: u32,
     cmd: u32,
 }
@@ -35,7 +38,15 @@ struct MousePacket {
     button: i32,
     x: i32,
     y: i32,
-    wheel: i32,
+    wheel: i32
+}
+
+// Set configuration packet for KmBox.
+#[repr(C)]
+#[derive(Clone, Copy, Pod, Zeroable)]
+struct ConfigPacket {
+    head: Header,
+    data: [u8; 1024],
 }
 
 /// KmBox mouse control client.
@@ -59,7 +70,8 @@ impl KmBox {
         let mac = u32::from_str_radix(mac_hex, 16)?;
 
         let mut km = Self { socket, addr, mac, index: 0 };
-        km.send_cmd(Cmd::Connect)?;
+        let header = km.next_header(Cmd::Connect);
+        km.send(header)?;
 
         let mut buf = [0u8; 1024];
         let (len, from) = km.socket.recv_from(&mut buf)?;
@@ -71,33 +83,41 @@ impl KmBox {
         Ok(km)
     }
 
+    pub fn set_config(&mut self, ip: Ipv4Addr, port: u16) -> Result<()> {
+        let mut packet = ConfigPacket {
+            head: self.next_header(Cmd::SetConfig),
+            data: [0u8; 1024]
+        };
+        println!("{:?}", ip);
+        packet.head.rand = u32::from(ip);
+        println!("Setting IP: {}", ip);
+
+        let port_bytes = port.to_be_bytes();
+        packet.data[0] = port_bytes[0];
+        packet.data[1] = port_bytes[1];
+
+        self.send(packet)?;
+
+        Ok(())
+    }
+
+    pub fn set_picture(&mut self, _image: Vec<u8>) -> Result<()> {
+        unimplemented!()
+    }
+
     /// Generate header for packets, incrementing the index for each new packet.
-    fn next_header(&mut self, rand: u32, cmd: Cmd) -> Header {
-        self.index += 1;
+    fn next_header(&mut self, cmd: Cmd) -> Header {
+        self.index = self.index.wrapping_add(1);
 
         Header {
             mac: self.mac,
-            time: rand,
+            rand: random(),
             index: self.index,
             cmd: cmd as u32
         }
     }
 
-    /// Send a command packet with no additional data.
-    fn send_cmd(&mut self, cmd: Cmd) -> Result<()> {
-        let header = self.next_header(0, cmd);
-
-        self.socket.send_to(bytes_of(&header), self.addr)?;
-        Ok(())
-    }
-
-    /// Send a mouse event packet with the specified parameters.
-    fn send_mouse(&mut self, rand: u32, cmd: Cmd, button: i32, x: i32, y: i32) -> Result<()> {
-        let packet = MousePacket {
-            head: self.next_header(rand, cmd),
-            button, x, y,
-            wheel: 0,
-        };
+    fn send<T: bytemuck::Pod>(&mut self, packet: T) -> Result<()> {
         self.socket.send_to(bytes_of(&packet), self.addr)?;
         Ok(())
     }
@@ -109,27 +129,30 @@ impl Mouse for KmBox {
 
     /// Press or release the left mouse button.
     fn left(&mut self, down: bool) {
-        self.send_mouse(0, Cmd::Left, down as i32, 0, 0).ok();
+        // self.send_mouse(Cmd::Left, down as i32, 0, 0).ok();
     }
 
     /// Press or release the right mouse button.
     fn right(&mut self, down: bool) {
-        self.send_mouse(0, Cmd::Right, down as i32, 0, 0).ok();
+        // self.send_mouse(Cmd::Right, down as i32, 0, 0).ok();
     }
 
 
     /// Move the mouse cursor by a relative delta (x, y) without interpolation(delay).
     fn move_delta(&mut self, x: i32, y: i32) {
-        self.send_mouse(0, Cmd::Move, 0, x, y).ok();
+        // self.send_mouse(Cmd::Move, 0, x, y).ok();
     }
 
     /// Move the mouse cursor to an absolute position (x, y) with interpolation over a specified delay in milliseconds.
-    fn move_auto(&mut self, x: i32, y: i32, delay: u32) { self.send_mouse(delay, Cmd::AutoMove, 0, x, y).ok(); }
+    fn move_auto(&mut self, x: i32, y: i32, delay: u32) {
+        // self.send_mouse(Cmd::AutoMove, 0, x, y).ok();
+    }
 
 
     /// Reboot the remote device.
     fn reboot(&mut self) {
-        self.send_cmd(Cmd::Reboot).ok();
+        let header = self.next_header(Cmd::Reboot);
+        self.send(header).ok();
     }
 
     /// Shutdown the remote device.

@@ -1,14 +1,13 @@
 mod capture;
 mod mouse;
 
-use std::time::Duration;
+use crate::mouse::mouse::Mouse;
 use anyhow::Result;
 use capture::capture::Capture;
 use capture::card::CardCapture;
 use capture::ScreenSize;
 use mouse::kmbox::KmBox;
 use opencv::highgui;
-use crate::mouse::mouse::Mouse;
 
 const SCREEN_SIZE: ScreenSize = ScreenSize { width: 1920, height: 1080 };
 const WINDOW_NAME: &str = "AiLocker";
@@ -36,12 +35,7 @@ fn main() -> Result<()> {
 
         let key = highgui::wait_key(50)?;
         if key == 118 {
-            kmbox.move_auto(0, -50, 1000);
-            kmbox.right(true);
-            kmbox.right(false);
-            std::thread::sleep(Duration::from_millis(150));
-            kmbox.left(true);
-            kmbox.left(false);
+            kmbox.set_config("192.168.2.188".parse()?, 2000)?;
         }
     }
 }
