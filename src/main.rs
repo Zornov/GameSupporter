@@ -36,7 +36,7 @@ fn main() -> Result<()> {
 
         let key = highgui::wait_key(50)?;
         if key == 118 {
-            kmbox.move_delta(0, -50);
+            kmbox.move_auto(0, -50, 1000);
             kmbox.right(true);
             kmbox.right(false);
             std::thread::sleep(Duration::from_millis(150));
