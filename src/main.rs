@@ -8,6 +8,9 @@ use capture::card::CardCapture;
 use capture::ScreenSize;
 use mouse::kmbox::KmBox;
 use opencv::highgui;
+use ort::ep::{DirectML, CUDA};
+use ort::session::builder::GraphOptimizationLevel;
+use ort::session::Session;
 
 const SCREEN_SIZE: ScreenSize = ScreenSize { width: 1920, height: 1080 };
 const WINDOW_NAME: &str = "AiLocker";
@@ -19,7 +22,22 @@ fn get_card_index() -> Result<i32> {
     let camera_index = input.trim().parse().unwrap_or(0);
     Ok(camera_index)
 }
+
+fn setup_ml() -> Result<()> {
+    let mut model = Session::builder()?
+        .with_optimization_level(GraphOptimizationLevel::Level3)?
+        .with_intra_threads(4)?
+        .with_execution_providers([
+            CUDA::default().build(),
+            DirectML::default().build()
+        ])?
+        .commit_from_file("yolo.onnx")?;
+    Ok(())
+}
 fn main() -> Result<()> {
+    tracing_subscriber::fmt::init();
+    setup_ml();
+
     let mut kmbox = KmBox::connect("192.168.2.188", 61697, "FF313CAB")?;
 
     let camera_index = get_card_index()?;

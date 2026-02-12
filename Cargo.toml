@@ -7,4 +7,6 @@ edition = "2024"
 anyhow = "1.0.100"
 opencv = "0.98.1"
 rand = "0.10.0"
-bytemuck = { version = "1.25.0", features = ["derive"] }
+bytemuck = { version = "1.25.0", features = [ "derive" ] }
+ort  = { version = "2.0.0-rc.11", features = [ "cuda" ] }
+tracing-subscriber = { version = "0.3", features = [ "env-filter", "fmt" ] }
