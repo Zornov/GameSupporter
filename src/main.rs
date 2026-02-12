@@ -8,7 +8,8 @@ use capture::card::CardCapture;
 use capture::ScreenSize;
 use mouse::kmbox::KmBox;
 use opencv::highgui;
-use ort::ep::{DirectML, CUDA};
+use ort::ep::{DirectML, ExecutionProvider, ExecutionProviderDispatch, TensorRT, CUDA};
+use ort::ErrorCode::ExecutionProviderFailure;
 use ort::session::builder::GraphOptimizationLevel;
 use ort::session::Session;
 
@@ -24,14 +25,34 @@ fn get_card_index() -> Result<i32> {
 }
 
 fn setup_ml() -> Result<()> {
-    let mut model = Session::builder()?
+    let mut session = Session::builder()?
         .with_optimization_level(GraphOptimizationLevel::Level3)?
-        .with_intra_threads(4)?
-        .with_execution_providers([
-            CUDA::default().build(),
-            DirectML::default().build()
-        ])?
-        .commit_from_file("yolo.onnx")?;
+        .with_intra_threads(4)?;
+
+    let tensor = TensorRT::default();
+    if tensor.register(&mut session).is_err() {
+        println!("Failed to register Tensor RT, falling back to CUDA!");
+    } else {
+        println!("Tensor registered!");
+    }
+
+    let cuda = CUDA::default();
+    if cuda.register(&mut session).is_err() {
+        println!("Failed to register CUDA, falling back to DirectML!");
+    } else {
+        println!("CUDA created.");
+    }
+
+    let direct = DirectML::default();
+    if direct.register(&mut session).is_err() {
+        println!("Failed to register DirectML! End runtime due to `Unable find execution platform`");
+        std::process::exit(1);
+    } else {
+        println!("DirectML created.");
+    }
+
+    session.commit_from_file("yolo.onnx")?;
+
     Ok(())
 }
 fn main() -> Result<()> {
