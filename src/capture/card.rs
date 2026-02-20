@@ -1,28 +1,20 @@
-use anyhow::{bail, Context, Result};
+use anyhow::{bail, ensure, Context, Result};
 use opencv::{
     core::{Mat, Rect},
     prelude::*,
     videoio::{self, VideoCapture},
 };
+use crate::capture::{Capture, ScreenSize};
 
-use super::capture::{Capture, ScreenSize};
-
-/// Card capture backed by OpenCV `VideoCapture`.
-/// Wraps a capture device and a region of interest (ROI).
 pub struct CardCapture {
-    /// OpenCV video capture handle.
     cap: VideoCapture,
-    /// Region of interest inside captured frames.
     roi: Rect,
 }
 
 impl CardCapture {
-
-    /// Create a new `CardCapture`.
-    /// - `index`: device index for `VideoCapture`.
-    /// - `region`: size (width/height) of the square ROI.
-    /// - `screen`: desired capture resolution (`ScreenSize`).
     pub fn new(index: i32, region: i32, screen: ScreenSize) -> Result<Self> {
+        ensure!(region > 0, "region must be positive");
+
         let mut cap = VideoCapture::new(index, videoio::CAP_DSHOW)
             .context("Failed to create VideoCapture")?;
 
@@ -34,22 +26,22 @@ impl CardCapture {
         cap.set(videoio::CAP_PROP_FRAME_HEIGHT, screen.height as f64)?;
 
         let half = region / 2;
+        let x = screen.width / 2 - half;
+        let y = screen.height / 2 - half;
 
-        let roi = Rect::new(
-            screen.width / 2 - half,
-            screen.height / 2 - half,
-            region,
-            region
+        ensure!(x >= 0 && y >= 0, "ROI starts outside frame");
+        ensure!(
+            x + region <= screen.width && y + region <= screen.height,
+            "ROI exceeds frame bounds"
         );
+
+        let roi = Rect::new(x, y, region, region);
 
         Ok(Self { cap, roi })
     }
 }
 
 impl Capture for CardCapture {
-
-    /// Grab a frame from the capture device and return the ROI as `opencv::core::Mat`.
-    /// Returns an error on read failure or empty frame.
     fn grab(&mut self) -> Result<Mat> {
         let mut frame = Mat::default();
         self.cap.read(&mut frame)?;
@@ -58,6 +50,6 @@ impl Capture for CardCapture {
             bail!("Empty frame");
         }
 
-        Mat::roi(&frame, self.roi)?.try_clone().map_err(Into::into)
+        Ok(Mat::roi(&frame, self.roi)?.try_clone()?)
     }
 }
